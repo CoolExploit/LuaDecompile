@@ -1,11 +1,11 @@
--- Depile: Advanced Roblox Script Decompiler
--- Upload this script to GitHub and use its raw URL in your main script
+-- Depile: Advanced Roblox Script Decompiler (Enhanced Version)
+-- Fully optimized for low-level executors, with fallback mechanisms
 
 local Depile = {}
 
 -- Function to check if an instance is a script
 local function isScript(obj)
-    return obj and (obj:IsA("LocalScript") or obj:IsA("ModuleScript"))
+    return obj and (obj:IsA("LocalScript") or obj:IsA("ModuleScript") or obj:IsA("Script"))
 end
 
 -- Function to get full name of an instance
@@ -41,8 +41,14 @@ end
 -- Function to extract and format function details
 local function decompileFunction(func)
     if typeof(func) ~= "function" then return "nil -- Not a function" end
-    local success, constants = pcall(debug.getconstants, func)
-    local success2, upvalues = pcall(debug.getupvalues, func)
+    
+    local success, constants = pcall(function()
+        return debug.getconstants and debug.getconstants(func) or {}
+    end)
+    
+    local success2, upvalues = pcall(function()
+        return debug.getupvalues and debug.getupvalues(func) or {}
+    end)
     
     local funcInfo = "function(...)
     "
@@ -56,23 +62,39 @@ local function decompileFunction(func)
     return funcInfo
 end
 
+-- Function to get all functions in GC tied to a script
+local function getScriptFunctions(scriptInstance)
+    local functions = {}
+    for _, v in pairs(getgc(true)) do
+        if typeof(v) == "function" and islclosure(v) then
+            local env = getfenv(v)
+            if env and env.script == scriptInstance then
+                table.insert(functions, decompileFunction(v))
+            end
+        end
+    end
+    return functions
+end
+
 -- Function to decompile a script
 function Depile.decompile(scriptInstance)
     if not isScript(scriptInstance) then
         return "[Depile] Error: Target is not a valid script."
     end
     
-    local success, result = pcall(decompile, scriptInstance)
-    if success then
+    local success, result = pcall(function()
+        return decompile and decompile(scriptInstance) or nil
+    end)
+    
+    if success and result then
         return result
     else
-        local functions = {}
-        for _, v in pairs(getgc(true)) do
-            if typeof(v) == "function" and islclosure(v) and getfenv(v).script == scriptInstance then
-                table.insert(functions, decompileFunction(v))
-            end
+        local functions = getScriptFunctions(scriptInstance)
+        if #functions > 0 then
+            return "[Depile] Decompiled manually:\n" .. table.concat(functions, "\n\n")
+        else
+            return "[Depile] Error: Unable to decompile script."
         end
-        return "[Depile] Decompiled manually:\n" .. table.concat(functions, "\n\n")
     end
 end
 
@@ -80,8 +102,12 @@ end
 function Depile.copyToClipboard(scriptInstance)
     local code = Depile.decompile(scriptInstance)
     if code then
-        setclipboard(code)
-        print("[Depile] Decompiled script copied to clipboard!")
+        if setclipboard then
+            setclipboard(code)
+            print("[Depile] Decompiled script copied to clipboard!")
+        else
+            print("[Depile] Error: Clipboard function not available.")
+        end
     else
         print("[Depile] Failed to copy script to clipboard.")
     end
