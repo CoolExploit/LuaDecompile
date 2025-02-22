@@ -18,91 +18,58 @@ local function getFullName(instance)
     return "game." .. table.concat(path, ".")
 end
 
--- Function to handle different data types
-local function handleDataType(data)
-    local dataType = typeof(data)
-    if dataType == "string" then
-        return "\"" .. data .. "\""
-    elseif dataType == "number" or dataType == "boolean" then
-        return tostring(data)
-    elseif dataType == "Instance" then
-        return getFullName(data)
-    elseif dataType == "table" then
-        local elements = {}
-        for k, v in pairs(data) do
-            table.insert(elements, "[" .. handleDataType(k) .. "] = " .. handleDataType(v))
-        end
-        return "{" .. table.concat(elements, ", ") .. "}"
-    else
-        return "nil -- Unsupported type: " .. dataType
+-- Function to safely check if an executor supports a feature
+local function isSupported(feature)
+    return pcall(function() return feature ~= nil end)
+end
+
+-- Function to decompile a script using executor's built-in method
+local function tryDecompile(scriptInstance)
+    if isSupported(decompile) then
+        local success, result = pcall(decompile, scriptInstance)
+        if success and result then return result end
     end
+    return nil
 end
 
 -- Function to extract and format function details
-local function decompileFunction(func)
-    if typeof(func) ~= "function" then return "nil -- Not a function" end
-    
-    local success, constants = pcall(function()
-        return debug.getconstants and debug.getconstants(func) or {}
-    end)
-    
-    local success2, upvalues = pcall(function()
-        return debug.getupvalues and debug.getupvalues(func) or {}
-    end)
-    
-    local funcInfo = "function(...)
-    "
-    if success then
-        funcInfo = funcInfo .. "    -- Constants: " .. handleDataType(constants) .. "\n"
-    end
-    if success2 then
-        funcInfo = funcInfo .. "    -- Upvalues: " .. handleDataType(upvalues) .. "\n"
-    end
-    funcInfo = funcInfo .. "end"
-    return funcInfo
-end
-
--- Function to get all functions in GC tied to a script
 local function getScriptFunctions(scriptInstance)
     local functions = {}
-    for _, v in pairs(getgc(true)) do
-        if typeof(v) == "function" and islclosure(v) then
-            local env = getfenv(v)
-            if env and env.script == scriptInstance then
-                table.insert(functions, decompileFunction(v))
+    if isSupported(getgc) and isSupported(islclosure) then
+        for _, v in pairs(getgc(true)) do
+            if typeof(v) == "function" and islclosure(v) then
+                local env = getfenv(v)
+                if env and env.script == scriptInstance then
+                    table.insert(functions, "-- Extracted function: " .. tostring(v))
+                end
             end
         end
     end
     return functions
 end
 
--- Function to decompile a script
+-- Function to decompile a script with fallbacks
 function Depile.decompile(scriptInstance)
     if not isScript(scriptInstance) then
         return "[Depile] Error: Target is not a valid script."
     end
     
-    local success, result = pcall(function()
-        return decompile and decompile(scriptInstance) or nil
-    end)
+    local code = tryDecompile(scriptInstance)
+    if code then return code end
     
-    if success and result then
-        return result
-    else
-        local functions = getScriptFunctions(scriptInstance)
-        if #functions > 0 then
-            return "[Depile] Decompiled manually:\n" .. table.concat(functions, "\n\n")
-        else
-            return "[Depile] Error: Unable to decompile script."
-        end
+    local functions = getScriptFunctions(scriptInstance)
+    if #functions > 0 then
+        return "[Depile] Decompiled manually:\n" .. table.concat(functions, "\n\n")
     end
+    
+    return "[Depile] Error: Unable to decompile script."
 end
 
 -- Function to copy decompiled script to clipboard
 function Depile.copyToClipboard(scriptInstance)
     local code = Depile.decompile(scriptInstance)
     if code then
-        if setclipboard then
+        if isSupported(setclipboard) then
             setclipboard(code)
             print("[Depile] Decompiled script copied to clipboard!")
         else
