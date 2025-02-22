@@ -1,4 +1,4 @@
-Depile - Advanced Roblox Script Decompiler
+# Depile - Advanced Roblox Script Decompiler
 Depile is a powerful and efficient script decompiler for Roblox, designed to extract and reconstruct scripts with ease. Whether you're debugging, analyzing, or learning, Depile provides a structured way to decompile scripts, handling various data types, function details, and automatic clipboard copying.
 
 Features:
