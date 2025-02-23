@@ -1,8 +1,8 @@
--- Depile: Advanced Roblox Script Decompiler (Enhanced Version)
--- Fully optimized for low-level executors, with fallback mechanisms
+-- Depile: Custom Roblox Script Decompiler
+-- Fully optimized for low-level executors, with custom bytecode analysis
 
 local Depile = {}
-local LuauDecompiler = {} -- Future implementation for custom bytecode analysis
+local LuauDecompiler = {} -- Custom LuaU bytecode analysis
 
 -- Function to check if an instance is a script
 local function isScript(obj)
@@ -24,13 +24,19 @@ local function isSupported(feature)
     return pcall(function() return feature ~= nil end)
 end
 
--- Function to decompile a script using executor's built-in method
-local function tryDecompile(scriptInstance)
-    if isSupported(decompile) then
-        local success, result = pcall(decompile, scriptInstance)
-        if success and result then return result end
+-- Function to extract raw bytecode (Stub for custom decompiler logic)
+local function extractBytecode(scriptInstance)
+    if isSupported(getscriptbytecode) then
+        return getscriptbytecode(scriptInstance)
     end
     return nil
+end
+
+-- Custom LuaU decompiler logic (WIP)
+local function decompileBytecode(bytecode)
+    if not bytecode then return "-- Error: No bytecode available." end
+    -- Placeholder for actual bytecode decompilation logic
+    return "-- Decompiled bytecode: (WIP)\n" .. tostring(bytecode)
 end
 
 -- Function to extract and format function details
@@ -51,21 +57,19 @@ end
 
 -- Function to reconstruct script structure
 local function reconstructScript(scriptInstance)
-    local header = "-- Depile: Advanced Decompiler (Improved Version)\n"
+    local header = "-- Depile: Custom Decompiler\n"
     header = header .. "-- Decompiled on " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
     header = header .. "-- Time taken: (to be measured) seconds\n\n"
     
-    local code = tryDecompile(scriptInstance)
-    if code then
-        return header .. code
-    end
+    local bytecode = extractBytecode(scriptInstance)
+    local code = decompileBytecode(bytecode)
     
     local functions = getScriptFunctions(scriptInstance)
     if #functions > 0 then
-        return header .. "-- Decompiled manually:\n" .. table.concat(functions, "\n\n")
+        code = code .. "\n\n-- Decompiled functions:\n" .. table.concat(functions, "\n\n")
     end
     
-    return header .. "-- Error: Unable to decompile script."
+    return header .. code
 end
 
 -- Function to decompile a script with fallbacks
