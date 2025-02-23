@@ -2,10 +2,21 @@
 -- Fully optimized for low-level executors, with fallback mechanisms
 
 local Depile = {}
+local LuauDecompiler = {} -- Future implementation for custom bytecode analysis
 
 -- Function to check if an instance is a script
 local function isScript(obj)
     return obj and (obj:IsA("LocalScript") or obj:IsA("ModuleScript") or obj:IsA("Script"))
+end
+
+-- Function to get full name of an instance
+local function getFullName(instance)
+    local path = {}
+    while instance and instance ~= game do
+        table.insert(path, 1, instance.Name)
+        instance = instance.Parent
+    end
+    return "game." .. table.concat(path, ".")
 end
 
 -- Function to safely check if an executor supports a feature
@@ -38,34 +49,45 @@ local function getScriptFunctions(scriptInstance)
     return functions
 end
 
--- Function to decompile a script with structured output
+-- Function to reconstruct script structure
+local function reconstructScript(scriptInstance)
+    local header = "-- Depile: Advanced Decompiler (Improved Version)\n"
+    header = header .. "-- Decompiled on " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
+    header = header .. "-- Time taken: (to be measured) seconds\n\n"
+    
+    local code = tryDecompile(scriptInstance)
+    if code then
+        return header .. code
+    end
+    
+    local functions = getScriptFunctions(scriptInstance)
+    if #functions > 0 then
+        return header .. "-- Decompiled manually:\n" .. table.concat(functions, "\n\n")
+    end
+    
+    return header .. "-- Error: Unable to decompile script."
+end
+
+-- Function to decompile a script with fallbacks
 function Depile.decompile(scriptInstance)
     if not isScript(scriptInstance) then
         return "[Depile] Error: Target is not a valid script."
     end
-
-    local startTime = tick()
-    local code = tryDecompile(scriptInstance) or "[Depile] Error: Unable to decompile script."
-    local timeTaken = string.format("%.2f", (tick() - startTime)) -- Time in seconds
-
-    return string.format([[
--- Depile: Advanced Roblox Script Decompiler
--- Decompiled with Depile
--- Decompiled on %s
--- Time taken: %s seconds
-
-%s
-]], os.date("%Y-%m-%d %H:%M:%S"), timeTaken, code)
+    return reconstructScript(scriptInstance)
 end
 
 -- Function to copy decompiled script to clipboard
-function Depile.setToClipboard(scriptInstance)
-    local result = Depile.decompile(scriptInstance)
-    if isSupported(setclipboard) then
-        setclipboard(result)
-        print("[Depile] Decompiled script copied to clipboard!")
+function Depile.copyToClipboard(scriptInstance)
+    local code = Depile.decompile(scriptInstance)
+    if code then
+        if isSupported(setclipboard) then
+            setclipboard(code)
+            print("[Depile] Decompiled script copied to clipboard!")
+        else
+            print("[Depile] Error: Clipboard function not available.")
+        end
     else
-        print("[Depile] Error: Clipboard function not available.")
+        print("[Depile] Failed to copy script to clipboard.")
     end
 end
 
