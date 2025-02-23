@@ -55,6 +55,38 @@ local function getScriptFunctions(scriptInstance)
     return functions
 end
 
+-- Function to extract global variables
+local function getGlobalVariables()
+    local globals = {}
+    if getgc then
+        for _, v in pairs(getgc(true)) do
+            if typeof(v) ~= "function" and typeof(v) ~= "table" then
+                table.insert(globals, tostring(v))
+            end
+        end
+    end
+    return globals
+end
+
+-- Function to extract upvalues from a script
+local function getUpvalues(scriptInstance)
+    local upvalues = {}
+    if getgc and debug.getupvalues then
+        for _, v in pairs(getgc(true)) do
+            if typeof(v) == "function" and islclosure(v) then
+                local env = getfenv(v)
+                if env and env.script == scriptInstance then
+                    local ups = debug.getupvalues(v)
+                    for i, up in ipairs(ups) do
+                        table.insert(upvalues, "Upvalue " .. i .. ": " .. tostring(up))
+                    end
+                end
+            end
+        end
+    end
+    return upvalues
+end
+
 -- Reconstruct script from decompiled data
 local function reconstructScript(scriptInstance)
     local header = "-- Depile Decompiled Script\n"
@@ -66,6 +98,16 @@ local function reconstructScript(scriptInstance)
     local functions = getScriptFunctions(scriptInstance)
     if #functions > 0 then
         code = code .. "\n\n-- Extracted Functions:\n" .. table.concat(functions, "\n")
+    end
+    
+    local globals = getGlobalVariables()
+    if #globals > 0 then
+        code = code .. "\n\n-- Extracted Global Variables:\n" .. table.concat(globals, "\n")
+    end
+    
+    local upvalues = getUpvalues(scriptInstance)
+    if #upvalues > 0 then
+        code = code .. "\n\n-- Extracted Upvalues:\n" .. table.concat(upvalues, "\n")
     end
     
     return header .. code
