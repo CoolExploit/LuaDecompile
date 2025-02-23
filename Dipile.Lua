@@ -87,6 +87,25 @@ local function getUpvalues(scriptInstance)
     return upvalues
 end
 
+-- Function to extract constants from functions
+local function getConstants(scriptInstance)
+    local constants = {}
+    if getgc and debug.getconstants then
+        for _, v in pairs(getgc(true)) do
+            if typeof(v) == "function" and islclosure(v) then
+                local env = getfenv(v)
+                if env and env.script == scriptInstance then
+                    local consts = debug.getconstants(v)
+                    for i, const in ipairs(consts) do
+                        table.insert(constants, "Constant " .. i .. ": " .. tostring(const))
+                    end
+                end
+            end
+        end
+    end
+    return constants
+end
+
 -- Reconstruct script from decompiled data
 local function reconstructScript(scriptInstance)
     local header = "-- Depile Decompiled Script\n"
@@ -110,6 +129,11 @@ local function reconstructScript(scriptInstance)
         code = code .. "\n\n-- Extracted Upvalues:\n" .. table.concat(upvalues, "\n")
     end
     
+    local constants = getConstants(scriptInstance)
+    if #constants > 0 then
+        code = code .. "\n\n-- Extracted Constants:\n" .. table.concat(constants, "\n")
+    end
+    
     return header .. code
 end
 
@@ -129,17 +153,6 @@ function Depile.copyToClipboard(scriptInstance)
         print("[Depile] Decompiled script copied to clipboard!")
     else
         print("[Depile] Failed to copy script.")
-    end
-end
-
--- Save decompiled script to file
-function Depile.saveToFile(scriptInstance, fileName)
-    local code = Depile.decompile(scriptInstance)
-    if code and #code > 0 and writefile then
-        writefile(fileName or "Depile_Decompiled.lua", code)
-        print("[Depile] Decompiled script saved to file!")
-    else
-        print("[Depile] Failed to save script.")
     end
 end
 
