@@ -26,58 +26,53 @@ local function extractBytecode(scriptInstance)
     return nil
 end
 
--- Improved function to intelligently parse bytecode into readable Lua code
+-- Function to parse bytecode into readable Lua code
 local function parseBytecode(bytecode)
     if not bytecode then return "-- Error: No bytecode available." end
     
     local luaCode = ""
     local instructions = {}
     
-    -- Advanced parsing logic for more structured output
     local i = 1
     while i <= #bytecode do
-        local byte1 = string.byte(bytecode, i)
-        local byte2 = string.byte(bytecode, i + 1) or 0
-        local opcode = string.format("OP_%02X%02X", byte1, byte2)
+        local opcode = string.format("OP_%02X", string.byte(bytecode, i))
         table.insert(instructions, opcode)
-        i = i + 2
+        i = i + 1
+    end
+    
+    local function addIndentation(level)
+        return string.rep("    ", level)
     end
     
     local functionStack = {}
     local variableStack = {}
     local tabLevel = 0
     
-    local function addIndentation()
-        return string.rep("    ", tabLevel)
-    end
-    
     for _, inst in ipairs(instructions) do
-        if inst:match("OP_1B") then
-            luaCode = luaCode .. "\n" .. addIndentation() .. "function generatedFunction()"
+        if inst == "OP_FUNC" then -- Function declaration
+            luaCode = luaCode .. "\n" .. addIndentation(tabLevel) .. "function generatedFunction()"
             table.insert(functionStack, "generatedFunction")
             tabLevel = tabLevel + 1
-        elseif inst:match("OP_3C") then
-            luaCode = luaCode .. "\n" .. addIndentation() .. "print(\"Hello World\")"
-        elseif inst:match("OP_5D") and #functionStack > 0 then
+        elseif inst == "OP_ENDFUNC" and #functionStack > 0 then -- End function
             tabLevel = tabLevel - 1
-            luaCode = luaCode .. "\n" .. addIndentation() .. "end -- " .. table.remove(functionStack)
-        elseif inst:match("OP_A0") then
+            luaCode = luaCode .. "\n" .. addIndentation(tabLevel) .. "end -- " .. table.remove(functionStack)
+        elseif inst == "OP_VAR" then -- Declare variable
             local varName = "var" .. (#variableStack + 1)
             table.insert(variableStack, varName)
-            luaCode = luaCode .. "\n" .. addIndentation() .. "local " .. varName .. " = 10"
-        elseif inst:match("OP_B1") and #variableStack > 0 then
-            luaCode = luaCode .. "\n" .. addIndentation() .. variableStack[#variableStack] .. " = " .. variableStack[#variableStack] .. " + 1"
-        elseif inst:match("OP_C2") and #variableStack > 0 then
-            luaCode = luaCode .. "\n" .. addIndentation() .. "return " .. variableStack[#variableStack]
+            luaCode = luaCode .. "\n" .. addIndentation(tabLevel) .. "local " .. varName .. " = 0"
+        elseif inst == "OP_SET" and #variableStack > 0 then -- Set variable value
+            luaCode = luaCode .. "\n" .. addIndentation(tabLevel) .. variableStack[#variableStack] .. " = 100"
+        elseif inst == "OP_RETURN" and #variableStack > 0 then -- Return statement
+            luaCode = luaCode .. "\n" .. addIndentation(tabLevel) .. "return " .. variableStack[#variableStack]
         else
-            luaCode = luaCode .. "\n" .. addIndentation() .. "-- Unknown instruction: " .. inst
+            luaCode = luaCode .. "\n" .. addIndentation(tabLevel) .. "-- Unknown instruction: " .. inst
         end
     end
     
     return "-- Decompiled Lua code:\n" .. luaCode
 end
 
--- Reconstruct script from decompiled data
+-- Function to reconstruct script from decompiled data
 local function reconstructScript(scriptInstance)
     local header = "-- Depile Decompiled Script\n"
     header = header .. "-- Decompiled on " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n\n"
@@ -96,7 +91,7 @@ function Depile.decompile(scriptInstance)
     return reconstructScript(scriptInstance)
 end
 
--- Copy decompiled script to clipboard
+-- Function to copy decompiled script to clipboard
 function Depile.copyToClipboard(scriptInstance)
     local code = Depile.decompile(scriptInstance)
     if code and #code > 0 and setclipboard then
@@ -107,7 +102,7 @@ function Depile.copyToClipboard(scriptInstance)
     end
 end
 
--- Save decompiled script to a file (new feature)
+-- Function to save decompiled script to a file
 function Depile.saveToFile(scriptInstance, fileName)
     local code = Depile.decompile(scriptInstance)
     if writefile and code then
@@ -118,7 +113,7 @@ function Depile.saveToFile(scriptInstance, fileName)
     end
 end
 
--- Improved function to print readable decompiled code
+-- Function to print readable decompiled code
 function Depile.printDecompiled(scriptInstance)
     local code = Depile.decompile(scriptInstance)
     if code then
