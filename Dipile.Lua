@@ -2,7 +2,6 @@
 -- Fully optimized for low-level executors, with custom bytecode analysis, function reconstruction, and structured output
 
 local Depile = {}
-local LuauDecompiler = {} -- Custom LuaU bytecode analysis and function reconstruction
 
 -- Function to check if an instance is a script
 local function isScript(obj)
@@ -19,40 +18,36 @@ local function getFullName(instance)
     return "game." .. table.concat(path, ".")
 end
 
--- Function to safely check if an executor supports a feature
-local function isSupported(feature)
-    return pcall(function() return feature ~= nil end)
-end
-
 -- Function to extract raw bytecode
 local function extractBytecode(scriptInstance)
-    if isSupported(getscriptbytecode) then
+    if getscriptbytecode then
         return getscriptbytecode(scriptInstance)
     end
     return nil
 end
 
--- Advanced bytecode decompilation logic with control flow analysis
+-- Advanced bytecode decompilation logic
 local function decompileBytecode(bytecode)
     if not bytecode then return "-- Error: No bytecode available." end
-    local decompiledCode = "-- Decompiled bytecode (Enhanced):\n"
     
-    -- TODO: Implement structured opcode parsing, advanced pattern recognition, and syntax rebuilding
-    -- TODO: Implement control flow analysis and stack simulation
-    -- TODO: Implement function reconstruction and variable recovery
+    -- Placeholder for actual bytecode parsing logic
+    local function parseBytecode(bytecode)
+        -- Implement real bytecode translation here
+        return "-- Decompiled Lua code from bytecode (Placeholder)"
+    end
     
-    return decompiledCode .. tostring(bytecode)
+    return parseBytecode(bytecode)
 end
 
--- Function to extract and format function details
+-- Function to extract functions from script environment
 local function getScriptFunctions(scriptInstance)
     local functions = {}
-    if isSupported(getgc) and isSupported(islclosure) then
+    if getgc and islclosure then
         for _, v in pairs(getgc(true)) do
             if typeof(v) == "function" and islclosure(v) then
                 local env = getfenv(v)
                 if env and env.script == scriptInstance then
-                    table.insert(functions, "-- Extracted function: " .. debug.info(v, "n"))
+                    table.insert(functions, debug.info(v, "n") or "Unnamed function")
                 end
             end
         end
@@ -60,26 +55,23 @@ local function getScriptFunctions(scriptInstance)
     return functions
 end
 
--- Enhanced script structure reconstruction with variable tracking and flow analysis
+-- Reconstruct script from decompiled data
 local function reconstructScript(scriptInstance)
-    local header = "-- Depile: Advanced Decompiler\n"
-    header = header .. "-- Decompiled on " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
-    header = header .. "-- Time taken: (to be measured) seconds\n\n"
+    local header = "-- Depile Decompiled Script\n"
+    header = header .. "-- Decompiled on " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n\n"
     
     local bytecode = extractBytecode(scriptInstance)
     local code = decompileBytecode(bytecode)
     
     local functions = getScriptFunctions(scriptInstance)
     if #functions > 0 then
-        code = code .. "\n\n-- Decompiled functions:\n" .. table.concat(functions, "\n\n")
+        code = code .. "\n\n-- Extracted Functions:\n" .. table.concat(functions, "\n")
     end
-    
-    -- TODO: Implement variable name recovery, loop detection, control flow structuring, expression reconstruction, argument tracing, and logical structuring
     
     return header .. code
 end
 
--- Function to decompile a script with enhanced handling
+-- Public function to decompile a script
 function Depile.decompile(scriptInstance)
     if not isScript(scriptInstance) then
         return "[Depile] Error: Target is not a valid script."
@@ -87,75 +79,26 @@ function Depile.decompile(scriptInstance)
     return reconstructScript(scriptInstance)
 end
 
--- Function to copy decompiled script to clipboard with better error handling
+-- Copy decompiled script to clipboard
 function Depile.copyToClipboard(scriptInstance)
     local code = Depile.decompile(scriptInstance)
-    if code and #code > 0 then
-        if isSupported(setclipboard) then
-            setclipboard(code)
-            print("[Depile] Decompiled script copied to clipboard!")
-        else
-            print("[Depile] Error: Clipboard function not available.")
-        end
+    if code and #code > 0 and setclipboard then
+        setclipboard(code)
+        print("[Depile] Decompiled script copied to clipboard!")
     else
-        print("[Depile] Failed to copy script to clipboard: Empty output.")
+        print("[Depile] Failed to copy script.")
     end
 end
 
--- Additional feature: Save to file for better analysis
+-- Save decompiled script to file
 function Depile.saveToFile(scriptInstance, fileName)
     local code = Depile.decompile(scriptInstance)
-    if code and #code > 0 then
-        if isSupported(writefile) then
-            writefile(fileName or "Depile_Decompiled.lua", code)
-            print("[Depile] Decompiled script saved to file!")
-        else
-            print("[Depile] Error: File writing function not available.")
-        end
+    if code and #code > 0 and writefile then
+        writefile(fileName or "Depile_Decompiled.lua", code)
+        print("[Depile] Decompiled script saved to file!")
     else
-        print("[Depile] Failed to save script: Empty output.")
+        print("[Depile] Failed to save script.")
     end
-end
-
--- New feature: Output results to console for debugging
-function Depile.printDecompiled(scriptInstance)
-    local code = Depile.decompile(scriptInstance)
-    print("\n[Depile] Decompiled Script:\n" .. code)
-end
-
--- Advanced opcode translation and inline analysis
-function Depile.advancedDecompile(scriptInstance)
-    local bytecode = extractBytecode(scriptInstance)
-    if not bytecode then return "-- Error: No bytecode available." end
-    
-    local advancedOutput = "-- Advanced Decompiled Bytecode:\n"
-    -- TODO: Implement deep opcode translation, loop unrolling, optimized expression handling, and enhanced syntax correction
-    
-    return advancedOutput .. tostring(bytecode)
-end
-
--- Validate bytecode integrity before decompilation
-function Depile.validateBytecode(scriptInstance)
-    local bytecode = extractBytecode(scriptInstance)
-    if bytecode and #bytecode > 0 then
-        print("[Depile] Bytecode is valid and ready for decompilation.")
-        return true
-    else
-        print("[Depile] Error: Bytecode extraction failed or is empty.")
-        return false
-    end
-end
-
--- Analyze script dependencies and linked instances
-function Depile.analyzeDependencies(scriptInstance)
-    if not isScript(scriptInstance) then return "[Depile] Error: Not a valid script." end
-    local dependencies = {}
-    for _, obj in pairs(scriptInstance:GetDescendants()) do
-        if isScript(obj) then
-            table.insert(dependencies, getFullName(obj))
-        end
-    end
-    return "-- Dependencies found:\n" .. table.concat(dependencies, "\n")
 end
 
 return Depile
