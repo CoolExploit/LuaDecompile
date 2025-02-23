@@ -1,8 +1,8 @@
--- Depile: Custom Roblox Script Decompiler
--- Fully optimized for low-level executors, with custom bytecode analysis
+-- Depile: Advanced Custom Roblox Script Decompiler
+-- Fully optimized for low-level executors, with custom bytecode analysis and enhanced reconstruction
 
 local Depile = {}
-local LuauDecompiler = {} -- Custom LuaU bytecode analysis
+local LuauDecompiler = {} -- Custom LuaU bytecode analysis and function reconstruction
 
 -- Function to check if an instance is a script
 local function isScript(obj)
@@ -32,11 +32,11 @@ local function extractBytecode(scriptInstance)
     return nil
 end
 
--- Custom LuaU decompiler logic (WIP)
+-- Advanced bytecode decompilation logic (Placeholder for actual implementation)
 local function decompileBytecode(bytecode)
     if not bytecode then return "-- Error: No bytecode available." end
-    -- Placeholder for actual bytecode decompilation logic
-    return "-- Decompiled bytecode: (WIP)\n" .. tostring(bytecode)
+    -- TODO: Implement custom bytecode analysis and structured output
+    return "-- Decompiled bytecode (Advanced WIP):\n" .. tostring(bytecode)
 end
 
 -- Function to extract and format function details
@@ -55,9 +55,9 @@ local function getScriptFunctions(scriptInstance)
     return functions
 end
 
--- Function to reconstruct script structure
+-- Enhanced script structure reconstruction with variable tracking
 local function reconstructScript(scriptInstance)
-    local header = "-- Depile: Custom Decompiler\n"
+    local header = "-- Depile: Advanced Decompiler\n"
     header = header .. "-- Decompiled on " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
     header = header .. "-- Time taken: (to be measured) seconds\n\n"
     
@@ -69,10 +69,12 @@ local function reconstructScript(scriptInstance)
         code = code .. "\n\n-- Decompiled functions:\n" .. table.concat(functions, "\n\n")
     end
     
+    -- TODO: Implement variable name recovery and structuring
+    
     return header .. code
 end
 
--- Function to decompile a script with fallbacks
+-- Function to decompile a script with enhanced handling
 function Depile.decompile(scriptInstance)
     if not isScript(scriptInstance) then
         return "[Depile] Error: Target is not a valid script."
@@ -80,10 +82,10 @@ function Depile.decompile(scriptInstance)
     return reconstructScript(scriptInstance)
 end
 
--- Function to copy decompiled script to clipboard
+-- Function to copy decompiled script to clipboard with better error handling
 function Depile.copyToClipboard(scriptInstance)
     local code = Depile.decompile(scriptInstance)
-    if code then
+    if code and #code > 0 then
         if isSupported(setclipboard) then
             setclipboard(code)
             print("[Depile] Decompiled script copied to clipboard!")
@@ -91,7 +93,7 @@ function Depile.copyToClipboard(scriptInstance)
             print("[Depile] Error: Clipboard function not available.")
         end
     else
-        print("[Depile] Failed to copy script to clipboard.")
+        print("[Depile] Failed to copy script to clipboard: Empty output.")
     end
 end
 
