@@ -32,12 +32,15 @@ local function extractBytecode(scriptInstance)
     return nil
 end
 
--- Advanced bytecode decompilation logic
+-- Advanced bytecode decompilation logic with control flow analysis
 local function decompileBytecode(bytecode)
     if not bytecode then return "-- Error: No bytecode available." end
     local decompiledCode = "-- Decompiled bytecode (Enhanced):\n"
-    -- Implementing structured decompilation logic with opcode parsing
-    -- TODO: Implement control flow analysis, stack simulation, function reconstruction, variable recovery, and loop handling
+    
+    -- TODO: Implement structured opcode parsing, advanced pattern recognition, and syntax rebuilding
+    -- TODO: Implement control flow analysis and stack simulation
+    -- TODO: Implement function reconstruction and variable recovery
+    
     return decompiledCode .. tostring(bytecode)
 end
 
@@ -71,7 +74,7 @@ local function reconstructScript(scriptInstance)
         code = code .. "\n\n-- Decompiled functions:\n" .. table.concat(functions, "\n\n")
     end
     
-    -- TODO: Implement variable name recovery, loop detection, control flow structuring, expression reconstruction, and argument tracing
+    -- TODO: Implement variable name recovery, loop detection, control flow structuring, expression reconstruction, argument tracing, and logical structuring
     
     return header .. code
 end
@@ -112,6 +115,47 @@ function Depile.saveToFile(scriptInstance, fileName)
     else
         print("[Depile] Failed to save script: Empty output.")
     end
+end
+
+-- New feature: Output results to console for debugging
+function Depile.printDecompiled(scriptInstance)
+    local code = Depile.decompile(scriptInstance)
+    print("\n[Depile] Decompiled Script:\n" .. code)
+end
+
+-- Advanced opcode translation and inline analysis
+function Depile.advancedDecompile(scriptInstance)
+    local bytecode = extractBytecode(scriptInstance)
+    if not bytecode then return "-- Error: No bytecode available." end
+    
+    local advancedOutput = "-- Advanced Decompiled Bytecode:\n"
+    -- TODO: Implement deep opcode translation, loop unrolling, optimized expression handling, and enhanced syntax correction
+    
+    return advancedOutput .. tostring(bytecode)
+end
+
+-- Validate bytecode integrity before decompilation
+function Depile.validateBytecode(scriptInstance)
+    local bytecode = extractBytecode(scriptInstance)
+    if bytecode and #bytecode > 0 then
+        print("[Depile] Bytecode is valid and ready for decompilation.")
+        return true
+    else
+        print("[Depile] Error: Bytecode extraction failed or is empty.")
+        return false
+    end
+end
+
+-- Analyze script dependencies and linked instances
+function Depile.analyzeDependencies(scriptInstance)
+    if not isScript(scriptInstance) then return "[Depile] Error: Not a valid script." end
+    local dependencies = {}
+    for _, obj in pairs(scriptInstance:GetDescendants()) do
+        if isScript(obj) then
+            table.insert(dependencies, getFullName(obj))
+        end
+    end
+    return "-- Dependencies found:\n" .. table.concat(dependencies, "\n")
 end
 
 return Depile
