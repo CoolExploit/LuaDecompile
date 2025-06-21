@@ -25,6 +25,7 @@ local OPCODE_NAMES = {
     [92] = "JUMPXEQ", [93] = "JUMPXNE", [94] = "JUMPXLT", [95] = "JUMPXLE"
 }
 
+-- Complete format table for all opcodes
 local OPCODE_FORMATS = {
     [0] = "iABC", [1] = "iABx", [2] = "iABx", [3] = "iABC", [4] = "iABC",
     [5] = "iABC", [6] = "iABC", [7] = "iABC", [8] = "iABC", [9] = "iABC",
@@ -33,17 +34,58 @@ local OPCODE_FORMATS = {
     [20] = "iABC", [21] = "iABC", [22] = "iABC", [23] = "iAsBx", [24] = "iABC",
     [25] = "iABC", [26] = "iABC", [27] = "iABC", [28] = "iABC", [29] = "iABC",
     [30] = "iABC", [31] = "iABC", [32] = "iAsBx", [33] = "iAsBx", [34] = "iABC",
-    [35] = "iAsBx", [36] = "iABC", [37] = "iABx", [38] = "iABC", [39] = "iAx"
+    [35] = "iAsBx", [36] = "iABC", [37] = "iABx", [38] = "iABC", [39] = "iAx",
+    [40] = "iABC", [41] = "iABx", [42] = "iABx", [43] = "iABC", [44] = "iABx",
+    [45] = "iABC", [46] = "iABC", [47] = "iABC", [48] = "iABC", [49] = "iABC",
+    [50] = "iABC", [51] = "iABC", [52] = "iABC", [53] = "iABx", [54] = "iABC",
+    [55] = "iABC", [56] = "iABC", [57] = "iABC", [58] = "iABC", [59] = "iABC",
+    [60] = "iABC", [61] = "iABC", [62] = "iABx", [63] = "iAsBx", [64] = "iAsBx",
+    [65] = "iABC", [66] = "iABC", [67] = "iABC", [68] = "iABC", [69] = "iABC",
+    [70] = "iABC", [71] = "iABC", [72] = "iAsBx", [73] = "iAsBx", [74] = "iAsBx",
+    [75] = "iAsBx", [76] = "iAsBx", [77] = "iABC", [78] = "iABC", [79] = "iABC",
+    [80] = "iABC", [81] = "iABC", [82] = "iAsBx", [83] = "iAsBx", [84] = "iAsBx",
+    [85] = "iAsBx", [86] = "iAsBx", [87] = "iAsBx", [88] = "iAsBx", [89] = "iAsBx",
+    [90] = "iAsBx", [91] = "iAsBx", [92] = "iAsBx", [93] = "iAsBx", [94] = "iAsBx",
+    [95] = "iAsBx"
 }
 
+-- Bit manipulation functions for maximum compatibility
+local band, rshift
+
+-- Try to use available bit libraries first
+local bit = bit32 or bit
+if bit and bit.band then
+    band = bit.band
+    rshift = bit.rshift or function(a, n) return math.floor(a / (2^n)) end
+else
+    -- Manual bit operations fallback for maximum compatibility
+    function band(a, b)
+        local result = 0
+        local power = 1
+        while a > 0 or b > 0 do
+            if (a % 2 == 1) and (b % 2 == 1) then
+                result = result + power
+            end
+            a = math.floor(a / 2)
+            b = math.floor(b / 2)
+            power = power * 2
+        end
+        return result
+    end
+    
+    function rshift(a, n)
+        return math.floor(a / (2^n))
+    end
+end
+
 local function decode(inst)
-    local opcode = inst & 0x3F
-    local A = (inst >> 6) & 0xFF
-    local C = (inst >> 14) & 0x1FF
-    local B = (inst >> 23) & 0x1FF
-    local Bx = (inst >> 14) & 0x3FFFF
+    local opcode = band(inst, 0x3F)
+    local A = band(rshift(inst, 6), 0xFF)
+    local C = band(rshift(inst, 14), 0x1FF)
+    local B = band(rshift(inst, 23), 0x1FF)
+    local Bx = band(rshift(inst, 14), 0x3FFFF)
     local sBx = Bx - 131071
-    local Ax = (inst >> 6)
+    local Ax = rshift(inst, 6)
 
     return {
         opcode = opcode,
@@ -58,31 +100,88 @@ end
 local Parser = {}
 
 function Parser.parse(bytecode)
-    if typeof(bytecode) ~= "string" then
-        return nil, "[Depile.Parser] Invalid bytecode"
+    -- Use type() instead of typeof() for compatibility
+    if type(bytecode) ~= "string" then
+        return nil, "[Depile.Parser] Invalid bytecode - expected string"
+    end
+
+    if #bytecode == 0 then
+        return nil, "[Depile.Parser] Empty bytecode"
     end
 
     local instructions = {}
-    for i = 1, #bytecode, 4 do
-        local chunk = bytecode:sub(i, i + 3)
-        if #chunk < 4 then break end
+    local pos = 1
+    
+    while pos <= #bytecode do
+        -- Check if we have enough bytes for a complete instruction
+        if pos + 3 > #bytecode then
+            break
+        end
+        
+        local chunk = bytecode:sub(pos, pos + 3)
+        
+        -- Verify we got 4 bytes
+        if #chunk ~= 4 then
+            break
+        end
 
-        local inst = string.unpack("<I4", chunk)
+        local success, inst = pcall(string.unpack, "<I4", chunk)
+        if not success then
+            return nil, "[Depile.Parser] Failed to unpack instruction at position " .. pos
+        end
+
         local decoded = decode(inst)
         decoded.index = #instructions + 1
+        decoded.position = pos
         table.insert(instructions, decoded)
+        
+        pos = pos + 4
+    end
+
+    if #instructions == 0 then
+        return nil, "[Depile.Parser] No valid instructions found"
     end
 
     return instructions
 end
 
 function Parser.formatInstructions(instructions)
+    if not instructions or #instructions == 0 then
+        return "[Depile.Parser] No instructions to format"
+    end
+
     local out = {}
     for _, inst in ipairs(instructions) do
-        table.insert(out, string.format("[%03d] %-12s A=%-3d B=%-3d C=%-3d sBx=%-5d (format=%s)",
-            inst.index, inst.name, inst.A, inst.B, inst.C, inst.sBx, inst.format))
+        local line = string.format("[%03d] %-15s A=%-3d B=%-3d C=%-3d sBx=%-6d (format=%s)",
+            inst.index, inst.name, inst.A, inst.B, inst.C, inst.sBx, inst.format)
+        table.insert(out, line)
     end
     return table.concat(out, "\n")
+end
+
+-- Additional utility function to get instruction details
+function Parser.getInstructionInfo(opcode)
+    return {
+        name = OPCODE_NAMES[opcode] or ("UNKNOWN_" .. tostring(opcode)),
+        format = OPCODE_FORMATS[opcode] or "iABC"
+    }
+end
+
+-- Function to validate bytecode format
+function Parser.validateBytecode(bytecode)
+    if type(bytecode) ~= "string" then
+        return false, "Bytecode must be a string"
+    end
+    
+    if #bytecode == 0 then
+        return false, "Bytecode cannot be empty"
+    end
+    
+    if #bytecode % 4 ~= 0 then
+        return false, "Bytecode length must be divisible by 4"
+    end
+    
+    return true
 end
 
 return Parser
