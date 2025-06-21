@@ -1,109 +1,98 @@
--- DeCompatibilityV2: Executor-Agnostic Runtime Compatibility Detector
--- Validates usable features by behavior, not by name or spoofed existence
+-- DeCompatibilityV2.lua
+-- Behavior-based Compatibility Checker for Roblox Executors (Real Tests Only)
 
 local DeCompatibility = {}
 DeCompatibility.__index = DeCompatibility
 
--- List of behavior-based test cases
-local tests = {
-    {
-        name = "hookfunction",
-        category = "hooking",
-        run = function()
-            local a = function() return 1 end
-            local b = function() return 2 end
-            local pass = false
-            local ok = pcall(function()
-                local hook = hookfunction(a, b)
-                pass = (a() == 2)
-            end)
-            return ok and pass
-        end
-    },
-    {
-        name = "getconstants",
-        category = "bytecode",
-        run = function()
-            local testFunc = function() return "test" end
-            local ok, result = pcall(function()
-                local c = getconstants(testFunc)
-                return type(c) == "table" and table.find(c, "test")
-            end)
-            return ok and result ~= nil
-        end
-    },
-    {
-        name = "loadstring",
-        category = "execution",
-        run = function()
-            local ok, result = pcall(function()
-                return loadstring("return 123")() == 123
-            end)
-            return ok and result
-        end
-    },
-    {
-        name = "getgc",
-        category = "introspection",
-        run = function()
-            local ok, result = pcall(function()
-                local gc = getgc(true)
-                return type(gc) == "table" and #gc > 0
-            end)
-            return ok and result
-        end
-    },
-    {
-        name = "checkcaller",
-        category = "security",
-        run = function()
-            local ok, result = pcall(function()
-                return type(checkcaller) == "function" and checkcaller() ~= nil
-            end)
-            return ok and result
-        end
-    },
-    {
-        name = "setclipboard",
-        category = "utility",
-        run = function()
-            return type(setclipboard) == "function"
-        end
-    }
-    -- Add more behavioral tests as needed
+-- Define test cases for actual behavior-based checks
+local TestCases = {
+    getconstants = function()
+        local f = function() return 123 end
+        local ok, result = pcall(getconstants, f)
+        return ok and type(result) == "table"
+    end,
+    getprotos = function()
+        local f = function() return function() end end
+        local ok, result = pcall(getprotos, f())
+        return ok and type(result) == "table"
+    end,
+    getupvalues = function()
+        local a = 10
+        local f = function() return a end
+        local ok, result = pcall(getupvalues, f)
+        return ok and type(result) == "table"
+    end,
+    hookfunction = function()
+        local test = function() return "A" end
+        local ok, err = pcall(function()
+            local old = hookfunction(test, function() return "B" end)
+            return test() == "B"
+        end)
+        return ok and err == true
+    end,
+    loadstring = function()
+        local ok, result = pcall(loadstring, "return 123")
+        return ok and type(result) == "function" and result() == 123
+    end,
+    checkcaller = function()
+        local ok, result = pcall(checkcaller)
+        return ok and type(result) == "boolean"
+    end,
+    getgenv = function()
+        local ok, env = pcall(getgenv)
+        return ok and type(env) == "table"
+    end,
+    getgc = function()
+        local ok, result = pcall(getgc)
+        return ok and type(result) == "table"
+    end,
+    setclipboard = function()
+        local ok = pcall(setclipboard, "test")
+        return ok
+    end,
+    writefile = function()
+        local ok = pcall(writefile, "compat_test.txt", "data")
+        return ok
+    end,
+    getinfo = function()
+        local ok, info = pcall(getinfo, function() end)
+        return ok and type(info) == "table"
+    end
 }
 
 function DeCompatibility.new()
     local self = setmetatable({}, DeCompatibility)
-    self.support = {}
+    self.flags = {}
+    self.supportedCount = 0
 
-    for _, test in ipairs(tests) do
-        local ok = false
+    for name, test in pairs(TestCases) do
+        local success = false
         pcall(function()
-            ok = test.run()
+            success = test()
         end)
-        self.support[test.name] = {
-            category = test.category,
-            passed = ok
-        }
+        self.flags[name] = success
+        if success then
+            self.supportedCount += 1
+        end
     end
 
+    self.total = table.getn(TestCases)
+    self.percent = math.floor((self.supportedCount / self.total) * 100)
     return self
 end
 
 function DeCompatibility:has(feature)
-    local result = self.support[feature]
-    return result and result.passed or false
+    return self.flags[feature] == true
 end
 
 function DeCompatibility:summary()
-    local out = {}
-    table.insert(out, "== DeCompatibility Report ==")
-    for name, data in pairs(self.support) do
-        local icon = data.passed and "✓" or "✗"
-        table.insert(out, string.format("[%s] %s (%s)", icon, name, data.category))
+    local lines = {}
+    table.insert(lines, "=== DeCompatibility Report ===")
+    table.insert(lines, string.format("Supported: %d/%d (%d%%)", self.supportedCount, self.total, self.percent))
+    for name, value in pairs(self.flags) do
+        table.insert(lines, string.format("[%s] %s", value and "✓" or "✗", name))
     end
-    return table.concat(out, "\n")
+    return table.concat(lines, "\n")
 end
 
 return DeCompatibility
