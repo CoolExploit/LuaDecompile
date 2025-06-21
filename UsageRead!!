@@ -1,0 +1,25 @@
+local Depile = loadstring(game:HttpGet("https://raw.githubusercontent.com/CoolExploit/LuaDecompile/refs/heads/main/Depile.lua"))()
+local targetScript = workspace:FindFirstChild("TargetScript")
+
+if not targetScript then
+    warn("[Depile] TargetScript not found")
+    return
+end
+
+-- Print decompiled output to console
+Depile.printDecompiled(targetScript)
+
+-- Optionally copy it to clipboard (if setclipboard is supported)
+Depile.copyToClipboard(targetScript)
+
+-- Or get it directly and do something with it
+local result = Depile.result(targetScript)
+print("Decompiled Lua Code:\n", result)
+
+-- Optional save it to a file manually if you want (using writefile)
+if writefile then
+    writefile("TargetScript_Decompiled.lua", result)
+    print("[Depile] Decompiled script saved as TargetScript_Decompiled.lua")
+else
+    print("[Depile] writefile() is not supported on this executor.")
+end
