@@ -1,14 +1,26 @@
-# Depile - Advanced Roblox Script Decompiler
-Depile is a powerful and efficient script decompiler for Roblox, designed to extract and reconstruct scripts with ease. Whether you're debugging, analyzing, or learning, Depile provides a structured way to decompile scripts, handling various data types, function details, and automatic clipboard copying.
+# 📦 Depile – Roblox Lua Decompiler
+Depile is a powerful and executor-compatible Roblox Lua decompiler designed to convert live script bytecode into human-readable Lua source code. It is built for educational and debugging purposes, supporting a wide range of executors with fallback and compatibility detection.
 
-# Features
-✅ Supports LocalScripts and ModuleScripts
-✅ Extracts script constants and upvalues
-✅ Handles strings, numbers, booleans, tables, and instances
-✅ Attempts automatic decompilation, with a manual fallback using getgc
-✅ Copies the decompiled script to clipboard for easy access
+#⚙️ Features
+✅ Script decompilation from in-game LocalScript, ModuleScript, or Script instances
 
-# How to Use
-Add Depile to your exploit environment.
-Call Depile.decompile(scriptInstance) to decompile a script.
-Use Depile.copyToClipboard(scriptInstance) to copy the output.
+🔍 Bytecode parsing and instruction decoding based on real Luau opcodes
+
+📋 Supports most major executor APIs (with dynamic compatibility checks)
+
+🧠 Function reconstruction and simple control flow rebuilding
+
+💾 Optional clipboard copy and file saving (only if supported by the executor)
+
+📄 Fully modular structure with Parser, Rebuilder, and Compatibility modules
+
+🧰 Zero fake output — all decompiled results are based on real bytecode
+
+#📌 Requirements
+A Lua executor with support for one or more of:
+
+getscriptbytecode
+
+getconstants, getprotos, getupvalues, etc.
+
+setclipboard, writefile (for output options)
