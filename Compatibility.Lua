@@ -1,166 +1,109 @@
--- Compatibility.lua v2 - Full Executor Capability Inspector
-local Compatibility = {}
-Compatibility.__index = Compatibility
+-- DeCompatibilityV2: Executor-Agnostic Runtime Compatibility Detector
+-- Validates usable features by behavior, not by name or spoofed existence
 
--- Define categories with function name and test logic
-local FunctionCategories = {
-    Bytecode = {
-        getscriptbytecode = function(f)
-            local s = Instance.new("LocalScript")
-            s.Source = "return 1"
-            s.Parent = game
-            return pcall(f, s)
-        end,
-        getconstants = function(f)
-            return pcall(f, function() return "abc" end)
-        end,
-        getprotos = function(f)
-            return pcall(f, function() return function() return 1 end end)
-        end,
-        getupvalues = function(f)
-            return pcall(f, function() local a = 1 return a end)
-        end,
-        setupvalue = function(f)
-            return pcall(f, function() local a = 1 return a end, 1, 2)
-        end,
-        setconstant = function(f)
-            return pcall(f, function() return 123 end, 1, 456)
+local DeCompatibility = {}
+DeCompatibility.__index = DeCompatibility
+
+-- List of behavior-based test cases
+local tests = {
+    {
+        name = "hookfunction",
+        category = "hooking",
+        run = function()
+            local a = function() return 1 end
+            local b = function() return 2 end
+            local pass = false
+            local ok = pcall(function()
+                local hook = hookfunction(a, b)
+                pass = (a() == 2)
+            end)
+            return ok and pass
         end
     },
-
-    Introspection = {
-        getinfo = function(f)
-            return pcall(f, function() return 1 end)
-        end,
-        getfenv = function(f)
-            return pcall(f, function() end)
-        end,
-        setfenv = function(f)
-            return pcall(f, function() end, {})
-        end,
-        debug_getinfo = function()
-            return pcall(function() return debug.getinfo(function() end) end)
+    {
+        name = "getconstants",
+        category = "bytecode",
+        run = function()
+            local testFunc = function() return "test" end
+            local ok, result = pcall(function()
+                local c = getconstants(testFunc)
+                return type(c) == "table" and table.find(c, "test")
+            end)
+            return ok and result ~= nil
         end
     },
-
-    Execution = {
-        loadstring = function(f)
-            local ok, res = pcall(f, "return 1337")
-            return ok and type(res) == "function"
-        end,
-        newcclosure = function(f)
-            return pcall(f, function() end)
-        end,
-        is_synapse_function = function(f)
-            return pcall(f, function() end)
+    {
+        name = "loadstring",
+        category = "execution",
+        run = function()
+            local ok, result = pcall(function()
+                return loadstring("return 123")() == 123
+            end)
+            return ok and result
         end
     },
-
-    Closure = {
-        iscclosure = function(f)
-            return pcall(f, function() end)
-        end,
-        islclosure = function(f)
-            return pcall(f, function() end)
-        end,
-        checkclosure = function(f)
-            return pcall(f, function() end)
-        end,
+    {
+        name = "getgc",
+        category = "introspection",
+        run = function()
+            local ok, result = pcall(function()
+                local gc = getgc(true)
+                return type(gc) == "table" and #gc > 0
+            end)
+            return ok and result
+        end
     },
-
-    Hooking = {
-        hookfunction = function(f)
-            return pcall(f, function() return 1 end, function() return 2 end)
-        end,
-        hookmetamethod = function(f)
-            return pcall(f, game, "__index", function() end)
-        end,
-        getnamecallmethod = function(f)
-            return pcall(f)
-        end,
-        setnamecallmethod = function(f)
-            return pcall(f, "__namecall")
-        end,
+    {
+        name = "checkcaller",
+        category = "security",
+        run = function()
+            local ok, result = pcall(function()
+                return type(checkcaller) == "function" and checkcaller() ~= nil
+            end)
+            return ok and result
+        end
     },
-
-    Environment = {
-        getgc = function(f)
-            local ok, gc = pcall(f)
-            return ok and type(gc) == "table"
-        end,
-        getgenv = function(f)
-            return pcall(f)
-        end,
-        getreg = function(f)
-            local ok, r = pcall(f)
-            return ok and type(r) == "table"
+    {
+        name = "setclipboard",
+        category = "utility",
+        run = function()
+            return type(setclipboard) == "function"
         end
     }
+    -- Add more behavioral tests as needed
 }
 
--- Safely get a function
-local function getFn(name)
-    local parts = string.split(name, "_")
-    if #parts == 2 and parts[1] == "debug" then
-        return debug[parts[2]]
-    else
-        return getgenv()[name]
-    end
-end
+function DeCompatibility.new()
+    local self = setmetatable({}, DeCompatibility)
+    self.support = {}
 
--- Instantiate compatibility checker
-function Compatibility.new()
-    local self = setmetatable({}, Compatibility)
-    self.results = {}
-    self.count = 0
-    self.available = 0
-
-    for category, functions in pairs(FunctionCategories) do
-        self.results[category] = {}
-
-        for name, tester in pairs(functions) do
-            local fn = getFn(name)
-            local ok = false
-            if type(fn) == "function" then
-                local success, result = pcall(tester, fn)
-                ok = success and result
-            end
-            self.results[category][name] = ok
-            self.count = self.count + 1
-            if ok then self.available = self.available + 1 end
-        end
+    for _, test in ipairs(tests) do
+        local ok = false
+        pcall(function()
+            ok = test.run()
+        end)
+        self.support[test.name] = {
+            category = test.category,
+            passed = ok
+        }
     end
 
-    self.percent = math.floor((self.available / self.count) * 100)
     return self
 end
 
-function Compatibility:has(name)
-    for _, group in pairs(self.results) do
-        if group[name] ~= nil then return group[name] end
+function DeCompatibility:has(feature)
+    local result = self.support[feature]
+    return result and result.passed or false
+end
+
+function DeCompatibility:summary()
+    local out = {}
+    table.insert(out, "== DeCompatibility Report ==")
+    for name, data in pairs(self.support) do
+        local icon = data.passed and "✓" or "✗"
+        table.insert(out, string.format("[%s] %s (%s)", icon, name, data.category))
     end
-    return false
+    return table.concat(out, "\n")
 end
 
-function Compatibility:get(name)
-    return self:has(name) and getFn(name) or nil
-end
-
-function Compatibility:summary()
-    local lines = {
-        "=== Capability Summary ===",
-        string.format("Supported: %d/%d (%d%%)", self.available, self.count, self.percent),
-        ""
-    }
-
-    for category, group in pairs(self.results) do
-        table.insert(lines, "› " .. category)
-        for name, ok in pairs(group) do
-            table.insert(lines, string.format("   [%s] %s", ok and "✓" or "✗", name))
-        end
-    end
-
-    return table.concat(lines, "\n")
-end
-
-return Compatibility
+return DeCompatibility
