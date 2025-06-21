@@ -1,7 +1,7 @@
 # 📦 Depile – Roblox Lua Decompiler
 Depile is a powerful and executor-compatible Roblox Lua decompiler designed to convert live script bytecode into human-readable Lua source code. It is built for educational and debugging purposes, supporting a wide range of executors with fallback and compatibility detection.
 
-#⚙️ Features
+# ⚙️ Features
 ✅ Script decompilation from in-game LocalScript, ModuleScript, or Script instances
 
 🔍 Bytecode parsing and instruction decoding based on real Luau opcodes
@@ -16,7 +16,7 @@ Depile is a powerful and executor-compatible Roblox Lua decompiler designed to c
 
 🧰 Zero fake output — all decompiled results are based on real bytecode
 
-#📌 Requirements
+# 📌 Requirements
 A Lua executor with support for one or more of:
 
 getscriptbytecode
